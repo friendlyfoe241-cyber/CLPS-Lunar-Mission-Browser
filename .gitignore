@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+scientific/.venv/
+
+# NASA source DEMS are large (tens of MB-190 MB). The raw data is NOT
+# committed; it is re-downloaded by scripts. Only compact derived
+# assets (in scientific/output/) are committed.
+scientific/data/terrain/*.tif
+scientific/data/terrain/*.TIF
+scientific/data/kernels/*.bsp
+scientific/data/kernels/*.bpc
+scientific/data/kernels/*.tls
+scientific/data/kernels/*.tf
+scientific/data/kernels/*.tpc
+
+# untracked scratch / temp scripts
+scientific/scripts/proj_verify_tmp*.py
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env / secrets
+.env
+.env.local
+.env*.local

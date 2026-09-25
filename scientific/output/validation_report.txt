@@ -1,0 +1,39 @@
+LUNA SIGHT VALIDATION REPORT
+====================================================================================================
+
+PASS  coords                 polar stereographic forward vs pyproj                   ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00100 m
+PASS  coords                 polar stereographic inverse vs pyproj                   ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  coords                 lat/lon <-> body-fixed rect roundtrip                   ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  local frame orthonormal lat=-89                         ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  ENU azimuth frame consistent lat=-89                    ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  local frame orthonormal lat=-85                         ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  ENU azimuth frame consistent lat=-85                    ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  local frame orthonormal lat=-80                         ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  ENU azimuth frame consistent lat=-80                    ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  local frame orthonormal lat=0                           ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  ENU azimuth frame consistent lat=0                      ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  local frame orthonormal lat=45                          ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  frame                  ENU azimuth frame consistent lat=45                     ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  geom                   Sun/Earth az from sub-point table                       ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Sun/Earth el from sub-point table                       ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Sun at zenith at sub-solar pt 2026-01-01 00:00:00 UTC   ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Earth at zenith at sub-earth pt 2026-01-01 00:00:00 UTC ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Sun at zenith at sub-solar pt 2025-06-01 12:00:00 UTC   ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Earth at zenith at sub-earth pt 2025-06-01 12:00:00 UTC ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Sun at zenith at sub-solar pt 2025-12-21 00:00:00 UTC   ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Earth at zenith at sub-earth pt 2025-12-21 00:00:00 UTC ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Sun at zenith at sub-solar pt 2026-06-15 06:00:00 UTC   ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  geom                   Earth at zenith at sub-earth pt 2026-06-15 06:00:00 UTC ref=    90.00000 calc=    90.00000 diff=    0.000000 tol= 0.00010 deg
+PASS  illum                  Sun above 3-deg horizon                                 ref=     1.00000 calc=     1.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  illum                  Sun clearance                                           ref=     2.00000 calc=     2.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  illum                  Sun below 3-deg horizon obstructed                      ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  illum                  Sun below geometric horizon (no terrain)                ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  illum                  Earth above horizon terrain-visible                     ref=     1.00000 calc=     1.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  dte                    DTE geometric visible flag type                         ref=     1.00000 calc=     1.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  solar                  power at zenith = solar constant                        ref=  1361.00000 calc=  1361.00000 diff=    0.000000 tol= 1.00000 W
+PASS  solar                  power below horizon = 0                                 ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 W
+PASS  solar                  power at horizon = 0 (horizontal panel)                 ref=     0.00000 calc=     0.00000 diff=    0.000000 tol= 0.00000 W
+PASS  terrain                horizon profile has finite samples                      ref=    72.00000 calc=    72.00000 diff=    0.000000 tol= 0.00000 deg
+PASS  terrain                horizon minimum > -89 deg                               ref=     1.00000 calc=     1.00000 diff=    0.000000 tol= 0.00000 deg
+
+Reference: see docs/VALIDATION.md for methodology.
