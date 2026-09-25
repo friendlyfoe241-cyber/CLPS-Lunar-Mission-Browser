@@ -1,0 +1,23 @@
+{
+  "dataset": {
+    "name": "LRO LOLA South Pole 80 m/pix DEM (LDEM_80S_80MPP_ADJ)",
+    "url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_80MPP_ADJ.TIF",
+    "doi": "10.60903/gsfcpgda-lola-spole",
+    "bibtex": "Barker, M.K., et al. (2023) 'A New View of the Lunar South Pole from LOLA', Planet. Sci. J. 4, 183. doi:10.3847/PSJ/acf3e1",
+    "crs": "IAU 30135 (Moon 2015 sphere / Ocentric / South Polar)",
+    "res": "80 m/pix",
+    "coverage": "80S to pole",
+    "frame": "MOON_ME (DE421)"
+  },
+  "source_url": "scientific/data/terrain/LDEM_80S_80MPP_ADJ.TIF",
+  "generated": "2026-09-25T17:59:31.950100+00:00",
+  "derived_from": "LDEM_80S_80MPP_ADJ.TIF",
+  "crs": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
+  "proj4": "+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs=True",
+  "map_size": 1024,
+  "elevation_vmin_vmax": [
+    -5702.46044921875,
+    5126.3818359375
+  ],
+  "note": "map backdrop is a derived visualization suitable for display; all quantitative elevation probing uses the raw preprocessed probe array / tile DEMs."
+}

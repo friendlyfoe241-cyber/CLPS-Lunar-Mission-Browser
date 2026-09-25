@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0e14;
+  --background-soft: #11151e;
+  --panel: #151a26;
+  --panel-2: #1a2030;
+  --border: #263048;
+  --border-soft: #1d2537;
+  --foreground: #dbe3ef;
+  --muted: #8b95a8;
+  --dim: #5c6578;
+  --accent: #5bb8ff;
+  --accent-2: #ffb454;
+  --sun: #ffcf5c;
+  --earth: #6fa8ff;
+  --ok: #3ddc97;
+  --warn: #e3b341;
+  --bad: #ff6b6b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  background: var(--background);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.term {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.luna-panel {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+
+.luna-grid {
+  display: grid;
+  gap: 1px;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.luna-grid > * {
+  background: var(--panel-2);
+}
+
+.mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.val-big {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.chip-badge {
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.status-visible {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+}
+.status-obstructed {
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 55%, transparent);
+}
+.status-horizon {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+}
+.status-unknown {
+  color: var(--dim);
+  border-color: var(--border);
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: #2a3450;
+  border-radius: 3px;
+}
+
+.rule {
+  border-top: 1px solid var(--border-soft);
+}
+
+.map-canvas {
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+}
