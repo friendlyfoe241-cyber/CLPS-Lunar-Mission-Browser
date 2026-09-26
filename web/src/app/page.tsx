@@ -10,8 +10,12 @@ import SouthPoleMap from "@/components/SouthPoleMap"
 import SitePanel from "@/components/SitePanel"
 import HorizonView from "@/components/HorizonView"
 import ControlPanel from "@/components/ControlPanel"
-import Timeline from "@/components/Timeline"
+import Timeline, { type TimelineSeries } from "@/components/Timeline"
 import Comparison from "@/components/Comparison"
+import WindowFinder from "@/components/WindowFinder"
+import SiteRanking from "@/components/SiteRanking"
+import type { EphemerisTable } from "@/lib/sci/ephemeris"
+import type { SolarPanelConfig } from "@/lib/sci/analysis"
 import { SITE_ROSTER } from "@/lib/sci/data"
 
 // elevation probe grid loaded from the preprocessed NPY asset
@@ -238,6 +242,18 @@ export default function AppPage() {
             <Timeline series={series} t={selectedT} onSelectT={handleSelectT} label="Primary" />
           </div>
 
+          <div className="luna-panel p-3">
+            <FindWindowsSection
+              series={series}
+              siteName={store.primary?.name ?? "Primary site"}
+              onJumpTo={handleSelectT}
+              range={store.range}
+              table={store.table}
+              panel={store.panel}
+              onSelectSite={handleSelectSite}
+            />
+          </div>
+
           {compareMode && (
             <Comparison
               a={store.primary}
@@ -263,6 +279,61 @@ export default function AppPage() {
           </Link>
         </div>
       </footer>
+    </div>
+  )
+}
+
+function FindWindowsSection({
+  series,
+  siteName,
+  onJumpTo,
+  range,
+  table,
+  panel,
+  onSelectSite,
+}: {
+  series: TimelineSeries[]
+  siteName: string
+  onJumpTo: (t: number) => void
+  range: { startIso: string; stopIso: string; stepMin: number }
+  table: EphemerisTable | null
+  panel: SolarPanelConfig
+  onSelectSite: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<"windows" | "rank">("windows")
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between">
+        <span className="term">Find windows &amp; rank sites</span>
+        <span className="text-[11px] text-[var(--dim)]">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setTab("windows")}
+              className={`rounded px-2 py-0.5 text-[11px] ${tab === "windows" ? "bg-[#20304f] text-white" : "text-[var(--muted)] hover:bg-[#1a2030]"}`}
+            >
+              Windows
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("rank")}
+              className={`rounded px-2 py-0.5 text-[11px] ${tab === "rank" ? "bg-[#20304f] text-white" : "text-[var(--muted)] hover:bg-[#1a2030]"}`}
+            >
+              Rank sites
+            </button>
+          </div>
+          {tab === "windows" ? (
+            <WindowFinder series={series} siteName={siteName} onJumpTo={onJumpTo} />
+          ) : (
+            <SiteRanking range={range} table={table} panel={panel} onSelectSite={onSelectSite} />
+          )}
+        </div>
+      )}
     </div>
   )
 }

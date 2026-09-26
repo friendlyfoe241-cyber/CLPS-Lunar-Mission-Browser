@@ -4,6 +4,7 @@
 // sunlight band and DTE-geometric band.  Click to move the analysis time.
 
 import { useMemo } from "react"
+import { findWindows } from "@/lib/sci/windows"
 
 export interface TimelineSeries {
   t: number
@@ -41,19 +42,12 @@ interface Band {
   x1: number
 }
 
+/** Run-length-encode contiguous `true` stretches of `pred` into pixel
+ *  bands using the shared findWindows helper, then mapping each window
+ *  through the pixel function x().
+ */
 function buildBands(series: TimelineSeries[], x: (t: number) => number, pred: (s: TimelineSeries) => boolean): Band[] {
-  const bands: Band[] = []
-  let start: number | null = null
-  for (let i = 0; i < series.length; i++) {
-    const on = pred(series[i])
-    if (on && start === null) start = series[i].t
-    if (!on && start !== null) {
-      bands.push({ x0: x(start), x1: x(series[i].t) })
-      start = null
-    }
-  }
-  if (start !== null) bands.push({ x0: x(start), x1: x(series[series.length - 1].t) })
-  return bands
+  return findWindows(series, pred).map((w) => ({ x0: x(w.startT), x1: x(w.stopT) }))
 }
 
 export default function Timeline({ series, t, onSelectT, label = "Analysis" }: TimelineProps) {
