@@ -10,6 +10,20 @@ let ephemerisTable: EphemerisTable | null = null
 let ephemerisRows: EphemerisRow[] = []
 const siteCache = new Map<string, Promise<SiteInfo | null>>()
 
+/** Shape of one row as it appears in the raw preprocessed JSON on disk —
+ *  before it's normalized into the app's internal EphemerisRow shape. */
+interface RawEphemerisRow {
+  t: number
+  sun?: [number, number, number]
+  earth?: [number, number, number]
+  sunLat?: number
+  sunLon?: number
+  sunDistKm?: number
+  earthLat?: number
+  earthLon?: number
+  earthDistKm?: number
+}
+
 export async function loadEphemerisTable(): Promise<EphemerisTable> {
   if (ephemerisTable) return ephemerisTable
   try {
@@ -17,15 +31,15 @@ export async function loadEphemerisTable(): Promise<EphemerisTable> {
     if (!res.ok) throw new Error(`ephemeris http ${res.status}`)
     const doc = await res.json()
     const meta = doc?.meta ?? {}
-    const raw = Array.isArray(doc?.data) ? doc.data : []
-    const rows: EphemerisRow[] = raw.map((r: any): EphemerisRow => ({
+    const raw: RawEphemerisRow[] = Array.isArray(doc?.data) ? doc.data : []
+    const rows: EphemerisRow[] = raw.map((r): EphemerisRow => ({
       t: r.t,
-      sunLat: Array.isArray(r.sun) ? r.sun[0] : r.sunLat,
-      sunLon: Array.isArray(r.sun) ? r.sun[1] : r.sunLon,
-      sunDistKm: Array.isArray(r.sun) ? r.sun[2] : r.sunDistKm,
-      earthLat: Array.isArray(r.earth) ? r.earth[0] : r.earthLat,
-      earthLon: Array.isArray(r.earth) ? r.earth[1] : r.earthLon,
-      earthDistKm: Array.isArray(r.earth) ? r.earth[2] : r.earthDistKm,
+      sunLat: (Array.isArray(r.sun) ? r.sun[0] : r.sunLat) ?? 0,
+      sunLon: (Array.isArray(r.sun) ? r.sun[1] : r.sunLon) ?? 0,
+      sunDistKm: (Array.isArray(r.sun) ? r.sun[2] : r.sunDistKm) ?? 0,
+      earthLat: (Array.isArray(r.earth) ? r.earth[0] : r.earthLat) ?? 0,
+      earthLon: (Array.isArray(r.earth) ? r.earth[1] : r.earthLon) ?? 0,
+      earthDistKm: (Array.isArray(r.earth) ? r.earth[2] : r.earthDistKm) ?? 0,
     }))
     ephemerisTable = {
       rows,

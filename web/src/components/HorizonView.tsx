@@ -55,7 +55,7 @@ export default function HorizonView({ pt, snap }: HorizonViewProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="term">Local horizon / sky view</div>
-      <div className="relative mx-auto" style={{ width: size, height: size }}>
+      <div className="relative mx-auto w-full" style={{ maxWidth: size, aspectRatio: "1 / 1" }}>
         <svg
           viewBox={`0 0 ${size} ${size}`}
           className="h-full w-full"

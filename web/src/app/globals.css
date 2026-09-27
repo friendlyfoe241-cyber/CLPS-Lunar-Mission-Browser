@@ -141,3 +141,21 @@ select:focus-visible {
   user-select: none;
   cursor: crosshair;
 }
+
+.globe-canvas {
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.globe-canvas:active {
+  cursor: grabbing;
+}
+
+.globe-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}

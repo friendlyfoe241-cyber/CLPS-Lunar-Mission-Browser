@@ -92,12 +92,13 @@ export default function Timeline({ series, t, onSelectT, label = "Analysis" }: T
         <span className="term">{label} — Time Explorer</span>
         <span className="mono text-[11px] text-[var(--muted)]">{fmtT(sel.utcIso)} UTC</span>
       </div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
-        role="img"
-        aria-label="Timeline chart of Sun and Earth elevation over the analysis window, with sunlight and direct-to-Earth bands. Click to select a time."
-      >
+      <div className="w-full" style={{ aspectRatio: `${W} / ${H}` }}>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="h-full w-full"
+          role="img"
+          aria-label="Timeline chart of Sun and Earth elevation over the analysis window, with sunlight and direct-to-Earth bands. Click to select a time."
+        >
         {/* DTE band background + filled */}
         <rect x={PAD.l} y={chart.yClamp(-22)} width={chart.iw} height={chart.yClamp(-8) - chart.yClamp(-22)} fill="rgba(111,168,255,0.05)" />
         {chart.dteBands.map((b, i) => (
@@ -154,7 +155,8 @@ export default function Timeline({ series, t, onSelectT, label = "Analysis" }: T
           <rect x={250} y={H - 31} width={10} height={6} fill="rgba(111,168,255,0.30)" />
           <text x={264} y={H - 24} fill="#dbe3ef" fontSize={9}>DTE geometric window</text>
         </g>
-      </svg>
+        </svg>
+      </div>
       <div className="flex items-center justify-between text-[11px] text-[var(--muted)]">
         <span>Click chart to move analysis time.</span>
         <span className="mono">{fmtT(series[0].utcIso)} → {fmtT(series[series.length - 1].utcIso)}</span>

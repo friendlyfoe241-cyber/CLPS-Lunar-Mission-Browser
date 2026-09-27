@@ -109,7 +109,14 @@ export function useLunaStore() {
   )
 
   const setCustomPoint = useCallback(
-    (lat: number, lon: number, elevationM: number, horizon: (number | null)[]) => {
+    (
+      lat: number,
+      lon: number,
+      elevationM: number,
+      horizon: (number | null)[],
+      horizonQuality: "computed" | "flat" = "flat",
+    ) => {
+      const hasRealHorizon = horizonQuality === "computed" && horizon.some((v) => v != null)
       setPrimary({
         kind: "custom",
         id: `custom:${lat.toFixed(3)}:${lon.toFixed(3)}`,
@@ -119,11 +126,12 @@ export function useLunaStore() {
         elevationM,
         slopeDeg: null,
         horizon,
-        horizonAvailable: horizon.length > 0,
+        horizonAvailable: hasRealHorizon,
         demResolutionM: 80,
-        demLabel: "LOLA 80 m/pix regional",
-        dataQualityStatement:
-          "Regional 80 m/pix terrain used for this user-defined point.",
+        demLabel: hasRealHorizon ? "LOLA 80 m/px regional (runtime horizon)" : "LOLA 80 m/px regional",
+        dataQualityStatement: hasRealHorizon
+          ? "Terrain horizon computed at runtime from the 80 m/px regional grid — lower resolution than the 5 m site-specific horizons used for catalog sites, but a real terrain estimate, not a flat assumption."
+          : "Flat horizon assumed — the regional terrain grid was not available when this point was analyzed, so Sun/Earth visibility below uses geometry only, not terrain obstruction.",
         site: null,
       })
     },
