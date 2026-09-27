@@ -405,12 +405,14 @@ export default function AppPage() {
                     compare={compareMode && store.compare ? store.compare : null}
                     primarySnap={store.primarySnapshot}
                     onSelectSite={handleSelectSite}
+                    onCustomPoint={handleCustomPoint}
+                    elevationAt={elevationAt}
                   />
                 )}
               </div>
               {mapMode === "3d" && (
                 <p className="mt-1 text-[10px] text-[var(--dim)]">
-                  Switch to the 2D map to click a custom (non-catalog) point — the 3D view is for orientation and site selection.
+                  Real LOLA terrain is draped on the polar cap (vertically exaggerated for visibility) — the rest of the globe is an unmapped placeholder. Switch to the 2D map for precise pan/zoom.
                 </p>
               )}
             </div>

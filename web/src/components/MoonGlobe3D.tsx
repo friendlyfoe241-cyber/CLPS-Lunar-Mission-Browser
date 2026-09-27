@@ -1,22 +1,33 @@
 "use client"
 
 // 3D "space view": the Moon as a globe, seen from above the south pole,
-// with catalog site markers and — for the selected site — arrows showing
-// the real direction to the Sun and to Earth, plus a tangent disc showing
-// that site's local horizon plane.
+// with real LOLA terrain draped over the polar cap (the same colorized
+// elevation image used as the 2D map's backdrop), catalog site markers,
+// and — for the selected site — arrows showing the real direction to the
+// Sun and to Earth, plus a tangent disc showing that site's local horizon
+// plane. Clicking anywhere on the globe selects a site or, off the
+// catalog, drops a custom analysis point — the same custom-point flow the
+// 2D map uses, so picking a location no longer requires switching views.
 //
-// This is a spatial-intuition companion to the 2D polar map, not a
-// replacement for it: precise terrain elevation and custom-point picking
-// still live in SouthPoleMap.tsx / HorizonView.tsx. Nothing here computes
-// new science — every position and direction is re-expressed from the
-// same verified numbers already shown elsewhere (see lib/sci/threeGeometry.ts).
+// The 2D map is still the place for exact panning/zoom and for reading
+// precise pixel-level terrain; this view is for orientation, spatial
+// intuition, and quick selection. Nothing here computes new science —
+// every position and direction is re-expressed from the same verified
+// numbers already shown elsewhere (see lib/sci/threeGeometry.ts).
 //
-// Approximation, stated plainly: the Sun/Earth marker + light direction is
-// computed from the SELECTED site's topocentric az/el and then drawn as if
-// it applies Moon-wide. Because the Sun and Earth are enormously far away
-// compared to the Moon's ~1,737 km radius, this introduces negligible error
-// (a fraction of a degree) and is only used for the 3D orientation view —
-// SitePanel's per-site numbers remain the authoritative, site-specific values.
+// Two approximations, stated plainly:
+//  1) The Sun/Earth marker + light direction is computed from the
+//     SELECTED site's topocentric az/el and drawn as if it applies
+//     Moon-wide. Because the Sun and Earth are enormously far away
+//     compared to the Moon's ~1,737 km radius, this introduces negligible
+//     error (a fraction of a degree) and is only used for this 3D
+//     orientation view — SitePanel's per-site numbers remain authoritative.
+//  2) The polar-cap relief is vertically exaggerated (see
+//     RELIEF_EXAGGERATION below) purely so real terrain is visible at
+//     globe scale — true south-pole relief is only ~0.1–0.3% of the
+//     Moon's radius and would look flat otherwise. The underlying
+//     elevation values are real (LOLA 80 m/px), only the display scale
+//     is stretched, and this is disclosed in the on-screen legend.
 
 import { useEffect, useRef, useState } from "react"
 import * as THREE from "three"
@@ -24,12 +35,17 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { SITE_ROSTER } from "@/lib/sci/data"
 import type { AnalysisPoint, SiteSnapshot } from "@/lib/sci/types"
 import { unitPosition, localDirection, surfaceNormal } from "@/lib/sci/threeGeometry"
+import { latLonToSpstereo, spstereoToLatLon, rectToLatLon, MOON_RADIUS_M } from "@/lib/sci/coordinates"
 
 interface MoonGlobe3DProps {
   primary: AnalysisPoint | null
   compare: AnalysisPoint | null
   primarySnap: SiteSnapshot | null
   onSelectSite: (id: string) => void
+  onCustomPoint: (lat: number, lon: number) => void
+  /** Same elevation sampler page.tsx feeds the 2D map — reused here to
+   *  build real (if vertically exaggerated) relief on the polar cap. */
+  elevationAt: (lat: number, lon: number) => number | null
 }
 
 const MARKER_COLOR: Record<string, number> = {
@@ -38,14 +54,32 @@ const MARKER_COLOR: Record<string, number> = {
   reference: 0x8b95a8,
 }
 
-export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSite }: MoonGlobe3DProps) {
+// Matches the real coverage of /data/terrain/south_pole_elevation.png and
+// the elevation probe grid (see SouthPoleMap.tsx's identical RWX_HALF).
+const RWX_HALF_M = 304_000
+const [CAP_MIN_LAT] = spstereoToLatLon(RWX_HALF_M, 0)
+const RELIEF_EXAGGERATION = 18
+const TERRAIN_TEXTURE_URL = "/data/terrain/south_pole_elevation.png"
+
+export default function MoonGlobe3D({
+  primary,
+  compare,
+  primarySnap,
+  onSelectSite,
+  onCustomPoint,
+  elevationAt,
+}: MoonGlobe3DProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   // "Latest ref" pattern: kept current via an effect (not during render) so
   // the pointerdown handler registered once in the setup effect below can
-  // always call the newest onSelectSite without re-registering the listener.
+  // always call the newest callbacks without re-registering the listener.
   const onSelectSiteRef = useRef(onSelectSite)
+  const onCustomPointRef = useRef(onCustomPoint)
+  const elevationAtRef = useRef(elevationAt)
   useEffect(() => {
     onSelectSiteRef.current = onSelectSite
+    onCustomPointRef.current = onCustomPoint
+    elevationAtRef.current = elevationAt
   })
 
   // Mutable scene refs so the render loop and click handler can reach the
@@ -60,6 +94,7 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
     dynamicGroup: THREE.Group
     light: THREE.DirectionalLight
     markerMeshes: THREE.Mesh[]
+    pickMeshes: THREE.Object3D[]
     raycaster: THREE.Raycaster
   } | null>(null)
 
@@ -91,12 +126,26 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
     // Starfield backdrop.
     scene.add(makeStarfield())
 
-    // Moon sphere.
+    // Base Moon sphere — a plain gray placeholder everywhere we don't have
+    // high-res imagery loaded (only the south-polar cap, below, has real
+    // LOLA terrain draped on it).
     const moon = new THREE.Mesh(
       new THREE.SphereGeometry(1, 64, 64),
       new THREE.MeshStandardMaterial({ color: 0x9aa2b5, roughness: 0.95, metalness: 0.02 }),
     )
     scene.add(moon)
+
+    // Real LOLA terrain, draped over the polar cap this data actually
+    // covers, with real (exaggerated-for-visibility) relief.
+    const capGeometry = buildTerrainCap(elevationAtRef.current)
+    const capMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })
+    const capMesh = new THREE.Mesh(capGeometry, capMaterial)
+    scene.add(capMesh)
+    new THREE.TextureLoader().load(TERRAIN_TEXTURE_URL, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace
+      capMaterial.map = tex
+      capMaterial.needsUpdate = true
+    })
 
     // Latitude/longitude graticule for spatial reference near the pole.
     scene.add(makeGraticule())
@@ -127,6 +176,7 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
       dynamicGroup,
       light,
       markerMeshes: [],
+      pickMeshes: [capMesh, moon],
       raycaster,
     }
 
@@ -149,8 +199,20 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
     }
     animate()
 
-    // Click-to-select: raycast against the current marker meshes.
+    // Click-to-select: a marker hit selects that site; otherwise a hit on
+    // the globe itself (cap or base sphere) drops a custom analysis point
+    // at that lat/lon — the same custom-point flow the 2D map uses, so
+    // picking a location no longer requires switching views.
+    let downX = 0
+    let downY = 0
     const handlePointerDown = (ev: PointerEvent) => {
+      downX = ev.clientX
+      downY = ev.clientY
+    }
+    const handlePointerUp = (ev: PointerEvent) => {
+      // Ignore drags (orbit-rotate) — only treat a near-stationary
+      // press-and-release as a "click" that picks a site or point.
+      if (Math.hypot(ev.clientX - downX, ev.clientY - downY) > 4) return
       const s = sceneRef.current
       if (!s) return
       const rect = renderer.domElement.getBoundingClientRect()
@@ -159,13 +221,23 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
         -((ev.clientY - rect.top) / rect.height) * 2 + 1,
       )
       s.raycaster.setFromCamera(ndc, s.camera)
-      const hits = s.raycaster.intersectObjects(s.markerMeshes, false)
-      if (hits.length > 0) {
-        const id = hits[0].object.userData?.siteId as string | undefined
+
+      const markerHits = s.raycaster.intersectObjects(s.markerMeshes, false)
+      if (markerHits.length > 0) {
+        const id = markerHits[0].object.userData?.siteId as string | undefined
         if (id) onSelectSiteRef.current(id)
+        return
+      }
+
+      const globeHits = s.raycaster.intersectObjects(s.pickMeshes, false)
+      if (globeHits.length > 0) {
+        const p = globeHits[0].point
+        const [lat, lon] = rectToLatLon(p.x, p.y, p.z)
+        onCustomPointRef.current(lat, lon)
       }
     }
     renderer.domElement.addEventListener("pointerdown", handlePointerDown)
+    renderer.domElement.addEventListener("pointerup", handlePointerUp)
 
     setReady(true)
 
@@ -173,6 +245,7 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
       cancelAnimationFrame(raf)
       ro.disconnect()
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown)
+      renderer.domElement.removeEventListener("pointerup", handlePointerUp)
       controls.dispose()
       renderer.dispose()
       scene.traverse((obj) => {
@@ -183,6 +256,7 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
           else mat?.dispose?.()
         }
       })
+      capMaterial.map?.dispose?.()
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement)
       sceneRef.current = null
     }
@@ -243,7 +317,7 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
       new THREE.CircleGeometry(0.16, 48),
       new THREE.MeshBasicMaterial({ color: 0x5bb8ff, transparent: true, opacity: 0.14, side: THREE.DoubleSide }),
     )
-    disc.position.copy(origin).addScaledVector(normal, 0.002)
+    disc.position.copy(origin).addScaledVector(normal, 0.02)
     disc.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
     s.dynamicGroup.add(disc)
     const discEdge = new THREE.LineLoop(
@@ -292,10 +366,11 @@ export default function MoonGlobe3D({ primary, compare, primarySnap, onSelectSit
         </div>
       )}
       <div className="pointer-events-none absolute bottom-2 left-2 flex flex-col gap-0.5 rounded bg-black/40 px-2 py-1.5 text-[10px] text-[var(--muted)] backdrop-blur-sm">
-        <span>Drag to rotate · scroll to zoom · click a marker to select it</span>
-        <span className="flex items-center gap-3">
+        <span>Drag to rotate · scroll to zoom · click a marker to select it, or click open ground for a custom point</span>
+        <span className="flex flex-wrap items-center gap-3">
           <LegendDot color="#ffcf5c" label="Sun direction" />
           <LegendDot color="#6fa8ff" label="Earth direction" />
+          <span>Textured cap: real LOLA terrain, relief ×{RELIEF_EXAGGERATION} for visibility</span>
         </span>
       </div>
     </div>
@@ -341,6 +416,61 @@ function glowMaterial(color: number): THREE.SpriteMaterial {
   ctx.fillRect(0, 0, size, size)
   const texture = new THREE.CanvasTexture(canvas)
   return new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+}
+
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v))
+}
+
+/**
+ * Builds a lat/lon grid mesh covering exactly the region the terrain PNG
+ * and elevation probe grid cover (south pole to CAP_MIN_LAT), with:
+ *  - vertex positions on the unit sphere, displaced outward by real
+ *    elevation (exaggerated by RELIEF_EXAGGERATION for visibility), and
+ *  - UV coordinates computed via the SAME polar-stereographic projection
+ *    (latLonToSpstereo) used to generate /data/terrain/south_pole_elevation.png
+ *    and to place it on the 2D map, so the texture lines up correctly.
+ * Triangle winding was verified (see project notes) to produce
+ * outward-facing normals for this lat/lon parameterization.
+ */
+function buildTerrainCap(elevationAt: (lat: number, lon: number) => number | null): THREE.BufferGeometry {
+  const latSteps = 56
+  const lonSteps = 144
+  const positions: number[] = []
+  const uvs: number[] = []
+  const indices: number[] = []
+
+  for (let i = 0; i <= latSteps; i++) {
+    const lat = -90 + ((90 + CAP_MIN_LAT) * i) / latSteps
+    for (let j = 0; j <= lonSteps; j++) {
+      const lon = (360 * j) / lonSteps
+      const elevM = elevationAt(lat, lon) ?? 0
+      const radiusScale = 1 + (RELIEF_EXAGGERATION * elevM) / MOON_RADIUS_M
+      const [ux, uy, uz] = unitPosition(lat, lon)
+      positions.push(ux * radiusScale, uy * radiusScale, uz * radiusScale)
+
+      const [xm, ym] = latLonToSpstereo(lat, lon)
+      uvs.push(clamp01(0.5 + xm / (2 * RWX_HALF_M)), clamp01(0.5 - ym / (2 * RWX_HALF_M)))
+    }
+  }
+
+  const cols = lonSteps + 1
+  for (let i = 0; i < latSteps; i++) {
+    for (let j = 0; j < lonSteps; j++) {
+      const a = i * cols + j
+      const b = a + cols
+      const c = a + 1
+      const d = b + 1
+      indices.push(a, c, b, b, c, d)
+    }
+  }
+
+  const geom = new THREE.BufferGeometry()
+  geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geom.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2))
+  geom.setIndex(indices)
+  geom.computeVertexNormals()
+  return geom
 }
 
 function makeGraticule(): THREE.LineSegments {
