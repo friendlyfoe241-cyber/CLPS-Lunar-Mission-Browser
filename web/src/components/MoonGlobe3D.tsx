@@ -1,13 +1,14 @@
 "use client"
 
-// 3D "space view": the Moon as a globe, seen from above the south pole,
-// with real LOLA terrain draped over the polar cap (the same colorized
-// elevation image used as the 2D map's backdrop), catalog site markers,
-// and — for the selected site — arrows showing the real direction to the
-// Sun and to Earth, plus a tangent disc showing that site's local horizon
-// plane. Clicking anywhere on the globe selects a site or, off the
-// catalog, drops a custom analysis point — the same custom-point flow the
-// 2D map uses, so picking a location no longer requires switching views.
+// 3D "space view": a proper whole-Moon globe — a full equirectangular
+// lunar basemap draped over the sphere — with real LOLA terrain (imagery +
+// exaggerated relief) inset over the south-polar cap this app actually
+// analyzes, catalog site markers, and — for the selected site — arrows
+// showing the real direction to the Sun and to Earth, plus a tangent disc
+// showing that site's local horizon plane. Clicking anywhere on the globe
+// selects a site or, off the catalog, drops a custom analysis point — the
+// same custom-point flow the 2D map uses, so picking a location no longer
+// requires switching views.
 //
 // The 2D map is still the place for exact panning/zoom and for reading
 // precise pixel-level terrain; this view is for orientation, spatial
@@ -15,7 +16,7 @@
 // every position and direction is re-expressed from the same verified
 // numbers already shown elsewhere (see lib/sci/threeGeometry.ts).
 //
-// Two approximations, stated plainly:
+// Three approximations, stated plainly:
 //  1) The Sun/Earth marker + light direction is computed from the
 //     SELECTED site's topocentric az/el and drawn as if it applies
 //     Moon-wide. Because the Sun and Earth are enormously far away
@@ -27,7 +28,14 @@
 //     globe scale — true south-pole relief is only ~0.1–0.3% of the
 //     Moon's radius and would look flat otherwise. The underlying
 //     elevation values are real (LOLA 80 m/px), only the display scale
-//     is stretched, and this is disclosed in the on-screen legend.
+//     is stretched, and this is disclosed in the on-screen legend. The
+//     exaggeration is tapered linearly to zero at the cap's outer edge so
+//     it meets the base globe's radius exactly, with no seam or z-fighting.
+//  3) The whole-Moon basemap outside the polar cap is a general-purpose
+//     visualization texture, not one of this app's verified LOLA/SPICE
+//     sources — see docs/DATA_SOURCES.md for exactly what it is and isn't.
+//     It's for visual context only; nothing in the app measures or reports
+//     anything from it.
 
 import { useEffect, useRef, useState } from "react"
 import * as THREE from "three"
@@ -59,7 +67,8 @@ const MARKER_COLOR: Record<string, number> = {
 const RWX_HALF_M = 304_000
 const [CAP_MIN_LAT] = spstereoToLatLon(RWX_HALF_M, 0)
 const RELIEF_EXAGGERATION = 18
-const TERRAIN_TEXTURE_URL = "/data/terrain/south_pole_elevation.png"
+const CAP_TEXTURE_URL = "/data/terrain/south_pole_elevation.png"
+const GLOBE_TEXTURE_URL = "/data/terrain/moon_global_basemap.jpg"
 
 export default function MoonGlobe3D({
   primary,
@@ -126,22 +135,27 @@ export default function MoonGlobe3D({
     // Starfield backdrop.
     scene.add(makeStarfield())
 
-    // Base Moon sphere — a plain gray placeholder everywhere we don't have
-    // high-res imagery loaded (only the south-polar cap, below, has real
-    // LOLA terrain draped on it).
-    const moon = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 64, 64),
-      new THREE.MeshStandardMaterial({ color: 0x9aa2b5, roughness: 0.95, metalness: 0.02 }),
-    )
-    scene.add(moon)
+    // Base Moon sphere: the rest of the globe (everything the polar cap
+    // doesn't cover), textured with a whole-Moon basemap for visual
+    // context — see docs/DATA_SOURCES.md for what this texture is and isn't.
+    const globeGeometry = buildGlobeSphere()
+    const globeMaterial = new THREE.MeshStandardMaterial({ color: 0x9aa2b5, roughness: 1, metalness: 0 })
+    const globeMesh = new THREE.Mesh(globeGeometry, globeMaterial)
+    scene.add(globeMesh)
+    new THREE.TextureLoader().load(GLOBE_TEXTURE_URL, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace
+      globeMaterial.map = tex
+      globeMaterial.needsUpdate = true
+    })
 
     // Real LOLA terrain, draped over the polar cap this data actually
-    // covers, with real (exaggerated-for-visibility) relief.
+    // covers, with real (exaggerated-for-visibility) relief that tapers to
+    // exactly match the base globe's radius at the seam (see file header).
     const capGeometry = buildTerrainCap(elevationAtRef.current)
     const capMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 })
     const capMesh = new THREE.Mesh(capGeometry, capMaterial)
     scene.add(capMesh)
-    new THREE.TextureLoader().load(TERRAIN_TEXTURE_URL, (tex) => {
+    new THREE.TextureLoader().load(CAP_TEXTURE_URL, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace
       capMaterial.map = tex
       capMaterial.needsUpdate = true
@@ -176,7 +190,7 @@ export default function MoonGlobe3D({
       dynamicGroup,
       light,
       markerMeshes: [],
-      pickMeshes: [capMesh, moon],
+      pickMeshes: [capMesh, globeMesh],
       raycaster,
     }
 
@@ -257,6 +271,7 @@ export default function MoonGlobe3D({
         }
       })
       capMaterial.map?.dispose?.()
+      globeMaterial.map?.dispose?.()
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement)
       sceneRef.current = null
     }
@@ -370,7 +385,7 @@ export default function MoonGlobe3D({
         <span className="flex flex-wrap items-center gap-3">
           <LegendDot color="#ffcf5c" label="Sun direction" />
           <LegendDot color="#6fa8ff" label="Earth direction" />
-          <span>Textured cap: real LOLA terrain, relief ×{RELIEF_EXAGGERATION} for visibility</span>
+          <span>Polar cap: real LOLA terrain, relief ×{RELIEF_EXAGGERATION} for visibility. Rest of globe: basemap for context only.</span>
         </span>
       </div>
     </div>
@@ -423,10 +438,59 @@ function clamp01(v: number): number {
 }
 
 /**
+ * Builds the "rest of the Moon" sphere — everywhere the polar cap doesn't
+ * cover (CAP_MIN_LAT up to the north pole) — at exactly radius 1, textured
+ * with the whole-Moon basemap via standard equirectangular UVs computed
+ * directly from (lat, lon). Deliberately excludes the cap's latitude range
+ * entirely (rather than overlapping it) so the cap's displaced relief can
+ * never be occluded by or z-fight with this mesh.
+ */
+function buildGlobeSphere(): THREE.BufferGeometry {
+  const latSteps = 72
+  const lonSteps = 144
+  const positions: number[] = []
+  const uvs: number[] = []
+  const indices: number[] = []
+
+  for (let i = 0; i <= latSteps; i++) {
+    const lat = CAP_MIN_LAT + ((90 - CAP_MIN_LAT) * i) / latSteps
+    for (let j = 0; j <= lonSteps; j++) {
+      const lon = (360 * j) / lonSteps
+      const [ux, uy, uz] = unitPosition(lat, lon)
+      positions.push(ux, uy, uz)
+      // Standard equirectangular UV: u wraps longitude 0→1, v runs north(0)→south(1).
+      // (u kept monotonic in the loop index — not re-signed to ±180 — so there's
+      // exactly one seam, at the lon=0/360 wrap, instead of a discontinuity at lon=180.)
+      uvs.push(clamp01(lon / 360), clamp01((90 - lat) / 180))
+    }
+  }
+
+  const cols = lonSteps + 1
+  for (let i = 0; i < latSteps; i++) {
+    for (let j = 0; j < lonSteps; j++) {
+      const a = i * cols + j
+      const b = a + cols
+      const c = a + 1
+      const d = b + 1
+      indices.push(a, c, b, b, c, d)
+    }
+  }
+
+  const geom = new THREE.BufferGeometry()
+  geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
+  geom.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2))
+  geom.setIndex(indices)
+  geom.computeVertexNormals()
+  return geom
+}
+
+/**
  * Builds a lat/lon grid mesh covering exactly the region the terrain PNG
  * and elevation probe grid cover (south pole to CAP_MIN_LAT), with:
  *  - vertex positions on the unit sphere, displaced outward by real
- *    elevation (exaggerated by RELIEF_EXAGGERATION for visibility), and
+ *    elevation (exaggerated by RELIEF_EXAGGERATION for visibility, tapered
+ *    linearly to zero at the cap's outer edge so it meets buildGlobeSphere's
+ *    radius of exactly 1 with no seam), and
  *  - UV coordinates computed via the SAME polar-stereographic projection
  *    (latLonToSpstereo) used to generate /data/terrain/south_pole_elevation.png
  *    and to place it on the 2D map, so the texture lines up correctly.
@@ -442,10 +506,13 @@ function buildTerrainCap(elevationAt: (lat: number, lon: number) => number | nul
 
   for (let i = 0; i <= latSteps; i++) {
     const lat = -90 + ((90 + CAP_MIN_LAT) * i) / latSteps
+    // 0 at the cap's outer edge (lat = CAP_MIN_LAT), 1 at the pole — keeps
+    // the seam against buildGlobeSphere exactly at radius 1.
+    const taper = 1 - i / latSteps
     for (let j = 0; j <= lonSteps; j++) {
       const lon = (360 * j) / lonSteps
       const elevM = elevationAt(lat, lon) ?? 0
-      const radiusScale = 1 + (RELIEF_EXAGGERATION * elevM) / MOON_RADIUS_M
+      const radiusScale = 1 + (taper * RELIEF_EXAGGERATION * elevM) / MOON_RADIUS_M
       const [ux, uy, uz] = unitPosition(lat, lon)
       positions.push(ux * radiusScale, uy * radiusScale, uz * radiusScale)
 

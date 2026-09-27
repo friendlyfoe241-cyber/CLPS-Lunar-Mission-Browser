@@ -18,6 +18,7 @@ import WindowFinder from "@/components/WindowFinder"
 import SiteRanking from "@/components/SiteRanking"
 import QuickGlance from "@/components/QuickGlance"
 import OnboardingBanner from "@/components/OnboardingBanner"
+import TimeScrubber from "@/components/TimeScrubber"
 import { PREDICATES } from "@/lib/sci/windows"
 import type { EphemerisTable } from "@/lib/sci/ephemeris"
 import type { SolarPanelConfig } from "@/lib/sci/analysis"
@@ -363,6 +364,7 @@ export default function AppPage() {
         </aside>
 
         <section className="flex flex-col gap-3">
+          <TimeScrubber range={store.range} utcIso={store.utcIso} onChange={store.setUtcIso} />
           <div className="grid flex-1 grid-cols-1 gap-3 xl:grid-cols-[1.5fr_1fr]">
             <div className="flex flex-col">
               <div className="mb-1 flex items-center justify-between gap-2">

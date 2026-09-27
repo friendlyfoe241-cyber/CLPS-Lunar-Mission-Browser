@@ -109,6 +109,7 @@ The Mazarico et al.(2011) site numbering used by PGDA tiles: Sites 01, 04, 06 et
 | `output/sites/<id>/site.json` | site tile DEMs / base DEM | elevation sample + horizon profile + slope (scripts/generate_site_assets.py) |
 | `output/ephemeris/sun_earth_ephemeris.json` (3.6 MB) | SPICE DE421+PA kernels | sub-solar/sub-Earth lat/lon + distances every 30 min, 2025-2027 |
 | `scientific/data/kernels/*` | NAIF | downloaded reference kernels |
+| `web/public/data/terrain/moon_global_basemap.jpg` (233 KB) | see note below | whole-Moon equirectangular basemap, 3D globe view only |
 
 
 ---
@@ -120,6 +121,19 @@ The Mazarico et al.(2011) site numbering used by PGDA tiles: Sites 01, 04, 06 et
   Site tiles credit: Flahaut, J. et al.,(2023) and Mazarico, E. et al.,(2011, doi:10.1029/2010JE003723}.
 - Ephemerides and orientations: NASA/JPL NAIF SPICE kernels}de421: Standish, E. M.,(2000}, JPL IOM 312.F-98-048; Moon FK/PCK: JPL NAIF}.
 - LROC IM-2 landing site: LROC website (lroc.im-ldi.com}, NASA/GSFC/Arizona State University}.
+- 3D-globe whole-Moon basemap (`moon_global_basemap.jpg`, 1024×512 equirectangular):
+  a lunar photographic mosaic bundled as a standard example asset in the
+  three.js library's own repository (`examples/textures/planets/moon_1024.jpg`,
+  github.com/mrdoob/three.js), used widely across three.js's official
+  examples for over a decade. It is decorative/contextual only — general
+  whole-Moon visual context for the 3D view — and is NOT treated as a
+  scientific source; it carries none of the LOLA/SPICE verification this
+  document describes for the other datasets, and its exact prime-meridian
+  alignment relative to the IAU/SPICE frame used elsewhere in this app is
+  not independently confirmed. The south-pole region — where this app's
+  actual analysis happens — is instead rendered from the same verified
+  LOLA elevation data as everywhere else (see the polar-cap entries above),
+  which sits on top of and visually supersedes this basemap at the pole.
 
 
 ---
