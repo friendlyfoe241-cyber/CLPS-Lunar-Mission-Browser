@@ -61,7 +61,7 @@ export default function AppPage() {
   const store = useLunaStore()
   const [compareMode, setCompareMode] = useState(false)
   const [showPro, setShowPro] = useState(false)
-  const [mapMode, setMapMode] = useState<"2d" | "3d">("2d")
+  const [mapMode, setMapMode] = useState<"2d" | "3d">("3d")
 
   useEffect(() => {
     void loadProbeGrid()

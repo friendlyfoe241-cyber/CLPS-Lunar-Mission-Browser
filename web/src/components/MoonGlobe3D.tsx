@@ -69,6 +69,7 @@ const [CAP_MIN_LAT] = spstereoToLatLon(RWX_HALF_M, 0)
 const RELIEF_EXAGGERATION = 18
 const CAP_TEXTURE_URL = "/data/terrain/south_pole_elevation.png"
 const GLOBE_TEXTURE_URL = "/data/terrain/moon_global_basemap.jpg"
+const HINT_AUTO_DISMISS_MS = 9000
 
 export default function MoonGlobe3D({
   primary,
@@ -108,6 +109,15 @@ export default function MoonGlobe3D({
   } | null>(null)
 
   const [ready, setReady] = useState(false)
+  // Temporary "how to interact" hint: shown when the globe first appears,
+  // dismissed on the first drag/scroll or after a few seconds, whichever
+  // comes first.
+  const [showHint, setShowHint] = useState(true)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setShowHint(false), HINT_AUTO_DISMISS_MS)
+    return () => window.clearTimeout(id)
+  }, [])
 
   // One-time three.js setup / teardown.
   useEffect(() => {
@@ -222,7 +232,9 @@ export default function MoonGlobe3D({
     const handlePointerDown = (ev: PointerEvent) => {
       downX = ev.clientX
       downY = ev.clientY
+      setShowHint(false)
     }
+    const handleWheel = () => setShowHint(false)
     const handlePointerUp = (ev: PointerEvent) => {
       // Ignore drags (orbit-rotate) — only treat a near-stationary
       // press-and-release as a "click" that picks a site or point.
@@ -252,6 +264,7 @@ export default function MoonGlobe3D({
     }
     renderer.domElement.addEventListener("pointerdown", handlePointerDown)
     renderer.domElement.addEventListener("pointerup", handlePointerUp)
+    renderer.domElement.addEventListener("wheel", handleWheel, { passive: true })
 
     setReady(true)
 
@@ -260,6 +273,7 @@ export default function MoonGlobe3D({
       ro.disconnect()
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown)
       renderer.domElement.removeEventListener("pointerup", handlePointerUp)
+      renderer.domElement.removeEventListener("wheel", handleWheel)
       controls.dispose()
       renderer.dispose()
       scene.traverse((obj) => {
@@ -375,6 +389,7 @@ export default function MoonGlobe3D({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="globe-canvas h-full w-full" />
+      {ready && showHint && <InteractionHint />}
       {!ready && (
         <div className="absolute inset-0 flex items-center justify-center text-[var(--dim)]">
           Loading 3D view…
@@ -584,4 +599,63 @@ function makeStarfield(): THREE.Points {
   geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3))
   const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, sizeAttenuation: true })
   return new THREE.Points(geom, mat)
+}
+
+/**
+ * Temporary, non-blocking explainer shown over the globe: a pointer that
+ * visibly sweeps left-to-right (drag to rotate) and a mouse whose wheel
+ * scrolls (scroll to zoom). Pure CSS motion, pointer-events disabled so it
+ * never intercepts the very gestures it's demonstrating.
+ */
+function InteractionHint() {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <style>{`
+        @keyframes lsDragSweep {
+          0%   { transform: translateX(-46px); opacity: 0; }
+          15%  { opacity: 1; }
+          50%  { transform: translateX(46px); opacity: 1; }
+          70%  { transform: translateX(46px); opacity: 0; }
+          100% { transform: translateX(-46px); opacity: 0; }
+        }
+        @keyframes lsRingPulse {
+          0%, 100% { transform: scale(1); opacity: 0.55; }
+          50%      { transform: scale(1.12); opacity: 1; }
+        }
+        @keyframes lsWheelScroll {
+          0%   { transform: translateY(0); opacity: 0; }
+          25%  { opacity: 1; }
+          75%  { transform: translateY(9px); opacity: 1; }
+          100% { transform: translateY(11px); opacity: 0; }
+        }
+        @keyframes lsHintFade {
+          0%   { opacity: 0; transform: translateY(6px); }
+          10%  { opacity: 1; transform: translateY(0); }
+          100% { opacity: 1; }
+        }
+        .ls-hint-card { animation: lsHintFade 0.5s ease-out both; }
+        .ls-drag-dot  { animation: lsDragSweep 2.4s ease-in-out infinite; }
+        .ls-drag-ring { animation: lsRingPulse 1.6s ease-in-out infinite; }
+        .ls-wheel-dot { animation: lsWheelScroll 1.6s ease-in-out infinite; }
+      `}</style>
+      <div className="ls-hint-card flex items-center gap-8 rounded-xl border border-white/10 bg-black/55 px-6 py-4 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-2">
+          <div className="relative flex h-12 w-28 items-center justify-center">
+            <div className="ls-drag-ring absolute inset-0 rounded-full border border-dashed border-[var(--accent)]" />
+            <span className="absolute left-1 text-[13px] text-[var(--accent)]">‹</span>
+            <span className="absolute right-1 text-[13px] text-[var(--accent)]">›</span>
+            <div className="ls-drag-dot h-4 w-4 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent)]" />
+          </div>
+          <span className="text-[11px] font-medium text-white">Drag to rotate the Moon</span>
+        </div>
+        <div className="flex flex-col items-center gap-2">
+          <svg width="28" height="44" viewBox="0 0 28 44" aria-hidden="true">
+            <rect x="2" y="2" width="24" height="40" rx="12" fill="none" stroke="var(--accent)" strokeWidth="1.6" />
+            <circle className="ls-wheel-dot" cx="14" cy="13" r="2.6" fill="var(--accent)" />
+          </svg>
+          <span className="text-[11px] font-medium text-white">Scroll to zoom in / out</span>
+        </div>
+      </div>
+    </div>
+  )
 }
